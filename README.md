@@ -38,7 +38,7 @@ This is the first documentation of this pattern and appears to be the key distin
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/sars-cov-2-vaccine-codon-analysis.git
+git clone https://github.com/GengisK4hn/sars-cov-2-vaccine-codon-analysis.git
 cd sars-cov-2-vaccine-codon-analysis
 
 # Install dependencies
