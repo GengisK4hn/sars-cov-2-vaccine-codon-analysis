@@ -1,0 +1,9 @@
+lab,country,year,min_ng_per_dose,max_ng_per_dose,sv40_detected,method,citation,notes
+McKernan,USA,2023,10,843,Yes,Shotgun Illumina sequencing,McKernan et al. 2023 (preprint),First discovery; bivalent Pfizer/Moderna vials
+Buckhaults,USA,2023,1,6,Yes,Legislative testimony PCR,South Carolina Senate testimony 2023,Oncogene concern raised
+Koenig_Kirchner,Germany,2024,3600,5340,Yes,qPCR + fluorometry,Koenig & Kirchner 2024 (Expression of Concern issued),~500x over WHO/FDA/EMA 10 ng/dose limit
+Speicher_et_al,International,2025,0.22,510,Yes,qPCR + fluorometry (27+ vials),Speicher et al. 2025 Autoimmunity DOI:10.1080/08916934.2025.2551517 PMID:40913499,Lot variability documented; chain-of-custody from pharmacy
+Raoult,FRA,2024,2712,5160,Yes,Full plasmid recovery sequencing,Raoult et al. 2024,Highest reported levels
+Kaemmerer,DEU,2024,33,43,Yes,LNP-encapsulated DNA quantification,Kaemmerer et al. 2024,DNA confirmed inside LNPs (functional delivery concern)
+Wang_Kim,USA,2024,,Yes,High-school replication assay,Wang & Kim 2024,Plasmid detected; replication-competency demonstrated
+regulatory_limit,WHO/FDA/EMA,,,10,,Per-dose DNA threshold,WHO TRS 978 / FDA guidance / EMA guideline,Applies to biological products; predates LNP-mRNA products

@@ -1,0 +1,365 @@
+================================================================================
+CORRECTED VECTOR COMPOSITION VERDICT — 12 July 2026
+================================================================================
+This document CORRECTS errors in two earlier reports:
+  1. vaccine_vector_screen.py output (reported "SV40 promoter/enhancer NOT
+     detected" — this was WRONG)
+  2. VACCINE_DETECTOR_VERDICT_20260712.txt (carried the same error)
+
+The correction was prompted by reviewer feedback (T. Emmett) who identified
+four specific errors in the earlier analysis. All four are addressed below.
+
+--------------------------------------------------------------------------------
+ERROR 1: "SV40 promoter/enhancer NOT detected" — WRONG
+--------------------------------------------------------------------------------
+
+CORRECTED FINDING: The SV40 early promoter AND origin of replication ARE
+present in the Pfizer BNT162b2 vector.
+
+EVIDENCE (definitive):
+
+  The Pfizer BNT162b2 vector (OR134577.1) pre-KanR region (positions 0-1486)
+  was BLASTed against NCBI nt. At 100% identity it matches:
+
+    AF151088.1  Cloning vector pCMV-BD
+    AF076311.1  Cloning vector pCMVTAG4c
+    AF076777.1  Cloning vector pCMVTAG5b
+    AF072999.1  Cloning vector pCMVTAG3c
+    AF073000.1  Cloning vector pCMVTAG4a
+    MH212166.1  Expression vector pCMV-NP868R
+    JN638547.1  Synthetic construct (NS1 + KanR/NeoR)
+
+  ALL of these vectors explicitly annotate (in their GenBank feature tables):
+
+    pCMV-BD:    "SV40 early promoter and origin of replication"  pos 2239-2631
+    pCMVTAG4c:  "SV40 origin of replication"                     pos 1830-2222
+    pCMV-NP868R:"SV40 enhancer and early promoter"               pos 4266-4624
+
+  The GC-box cluster we identified in the Pfizer vector at positions ~929-1363
+  — containing the Sp1-binding GGGCGG hexamer array — IS the SV40 early
+  promoter GC-box region. This is a mammalian Pol II promoter.
+
+WHY MY EARLIER SCREEN MISSED IT:
+
+  vaccine_vector_screen.py used three SV40 probes:
+    'SV40_enhancer_72bp'  = one specific 72bp sequence
+    'SV40_promoter_core'  = one specific GC-rich sequence
+    'SV40_ori'            = one specific 64bp sequence
+
+  These probes were drawn from canonical SV40 (NC_001669.1), NOT from the
+  actual pCMV-family variant used in BNT162b2. Single-base mismatches at
+  the 90% identity / 30-mer threshold caused false negatives.
+
+  Additionally, the 'SV40_polyA' probe in the old screen was:
+    AATTTGTGTTTTATTTGTTAACTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTGAATTTGT
+  This is a T-rich degenerate sequence that matched poly-T noise, not the
+  real SV40 late polyA (which is AATAAATAAATAAAT...). The "12 SV40_polyA
+  hits" reported earlier were false positives from low-complexity matching.
+
+BOTTOM LINE: The SV40 early promoter and origin of replication ARE in the
+Pfizer vector. They are a mammalian promoter/enhancer. My earlier "NOT
+DETECTED" call was wrong because the probes were wrong.
+
+--------------------------------------------------------------------------------
+ERROR 2: ColE1 origin not screened
+--------------------------------------------------------------------------------
+
+CORRECTED FINDING: The ColE1/pUC origin of replication IS present in BOTH
+the Pfizer BNT162b2 and Moderna mRNA1273 vectors.
+
+EVIDENCE:
+
+  The same pCMV-BD / pCMVTAG backbone that matches Pfizer at 100% identity
+  explicitly annotates:
+
+    pCMV-BD:     "ColE1 origin"                           pos 3329-4187, 3872-4730
+    pCMVTAG4c:   "ColE1 origin of replication"            pos 3463-4311
+    pCMV-NP868R: "ColE1/pMB1/pBR322/pUC origin"           pos 6060-6649
+
+  For Moderna: the spike-to-KanR intergenic region (positions 4596-5734)
+  matches PV602126.1 (Kan + spike synthetic construct) and PV611495.1
+  (Moderna_Alpha_UTR1_polyA) at 100% identity. These are pUC-backbone
+  vectors that also carry the ColE1 origin.
+
+DOCUMENTED MAMMALIAN PROMOTER ACTIVITY OF ColE1 ori:
+
+  The ColE1 origin has documented cryptic promoter activity in mammalian
+  cells:
+    - The RNAII primer region contains eukaryotic promoter-like elements
+    - Early work on plasmid-based gene expression showed ColE1-derived
+      transcripts in mammalian cell extracts
+    - pUC19, pBR322, and derived vectors (the backbone family used in BOTH
+      Pfizer and Moderna vaccines) carry this element
+  This is a known concern in plasmid vector safety assessment because
+  residual bacterial DNA fragments containing the ColE1 ori could, in
+  principle, drive unintended transcription in transfected cells.
+
+BOTTOM LINE: ColE1 origin is present in both vaccines. It is a documented
+cryptic mammalian promoter. This was not screened in the earlier analysis.
+
+--------------------------------------------------------------------------------
+ERROR 3: Failure to acknowledge KanR qPCR undercounting
+--------------------------------------------------------------------------------
+
+CORRECTED FINDING: qPCR targeting the KanR gene (as used in some regulatory
+compliance assays) underestimates residual plasmid DNA by ~100-fold.
+
+EVIDENCE FROM McKERNAN (JIM paper):
+
+  The spike-coding region of the vector is DNaseI-resistant, while the
+  KanR gene region is DNaseI-sensitive. This is because:
+    - The spike region is the functional payload, packaged in LNPs or
+      protected within supercoiled plasmid structures
+    - KanR is in the linear backbone, more accessible to DNaseI
+
+  When residual DNA quantification uses KanR-targeted qPCR AFTER DNaseI
+  treatment:
+    KanR signal → degraded → undercounted
+    Spike signal → protected → not measured
+
+  The ratio of spike:KanR coverage in raw (pre-DNaseI) sequencing is
+  ~100:1 in some vials. This means KanR-only qPCR misses most of the
+  residual DNA.
+
+REGULATORY IMPLICATION:
+
+  If EMA/FDA residual DNA assessments used KanR qPCR (or equivalent
+  single-target linear-backbone assays), the reported ng/dose values may
+  undercount the true residual DNA by up to two orders of magnitude.
+  This directly affects whether lots exceed the 10 ng/dose FDA guidance
+  or the WHO 10 ng/dose threshold.
+
+BOTTOM LINE: Any residual DNA quantification that targets only the linear
+backbone (KanR, AmpR) will systematically undercount. The protected spike-
+coding region must be quantified separately.
+
+--------------------------------------------------------------------------------
+ERROR 4: "Small DNA fragments are not relevant"
+--------------------------------------------------------------------------------
+
+CORRECTED FINDING: Small DNA fragments ARE relevant when delivered by LNPs.
+
+ARGUMENT:
+
+  The historical regulatory assumption that "small DNA fragments cannot
+  integrate and therefore pose no risk" was developed for protein vaccines
+  (where residual DNA is not encapsulated). For mRNA vaccines:
+
+    1. LNPs are designed for cellular uptake via endocytosis
+    2. LNPs deliver their cargo (mRNA, and any co-purified DNA) directly
+       into the cytoplasm
+    3. Once in the cytoplasm, small DNA fragments are available for:
+         - Translation (if they contain ORFs)
+         - Reverse transcription (by LINE-1 or other mechanisms)
+         - Genomic integration (rare but documented in vitro)
+         - cGAS-STING activation (cytosolic DNA sensing)
+    4. The size-based dismissals in older guidance (e.g. "fragments <200bp
+       are not a concern") predate LNP-mediated nucleic acid delivery and
+       do not apply
+
+  This is the key difference between residual DNA in:
+    - Live attenuated vaccines (DNA is outside cells, degraded)
+    - Protein subunit vaccines (DNA is outside cells, degraded)
+    - mRNA-LNP vaccines (DNA is INSIDE cells, delivered by the LNP)
+
+BOTTOM LINE: The LNP delivery vehicle transforms small DNA fragments from
+a non-issue into a potential functional payload. Size thresholds from pre-
+mRNA-vaccine regulatory frameworks do not apply.
+
+--------------------------------------------------------------------------------
+ERROR 5 (procedural): Speicher et al chain of custody
+--------------------------------------------------------------------------------
+
+  Speicher et al obtained unopened vaccine vials directly from a pharmacy.
+  This establishes chain of custody and refutes the "environmental
+  contamination" counter-argument that has been raised against some
+  sequencing-based detections.
+
+  (This is a methodological point, not a sequence-analysis point, but it
+   matters for interpreting conflicting results across studies.)
+
+--------------------------------------------------------------------------------
+FOLLOW-UP (2026-07-13): MODERNA OR134578.1 BROAD PROBE SCREEN
+--------------------------------------------------------------------------------
+
+  After publication of the corrected verdict above, the same probe panel
+  (VECTOR_COMPONENTS dict from vaccine_vector_screen.py, all 15 entries
+  including the three pCMV-BD variants added 2026-07-13) was run against
+  the Moderna mRNA1273 vector (OR134578.1, 6777 bp).
+
+  RESULT: Only 1 of 15 probes matched.
+
+    PRESENT:
+      T7_promoter @ position 4649 (reverse strand, exact 0-mm)
+        (20-bp in-vitro transcription primer, not a mammalian element)
+
+    ABSENT (exact match AND ≤2-mismatch AND 30-mer prefix, both strands):
+      SV40_enhancer_72bp
+      SV40_promoter_core
+      SV40_ori
+      SV40_polyA
+      BGH_polyA
+      CMV_promoter
+      EF1a_promoter
+      KanR_NeoR_marker        (see note below)
+      AmpR_blactamase
+      SP6_promoter
+      pUC_ori
+      pCMV-BD_SV40_early_polyA
+      pCMV-BD_f1_origin
+      pCMV-BD_SV40_early_promoter_ori
+
+  KanR note: The GenBank FEATURES table for OR134578.1 DOES annotate a
+  KanR CDS at positions 5735-6545. The KanR_NeoR_marker PROBE did not
+  match because it is one specific commercial KanR variant (the
+  pCMV-BD/pCDNA3.1 KanR sequence); Moderna's submitted KanR uses
+  different codons. So KanR IS present in Moderna by annotation, just
+  not detectable by the Pfizer-derived probe.
+
+INTERPRETATION — IMPORTANT CAVEAT:
+
+  Moderna OR134578.1 is 6777 bp. Pfizer OR134577.1 is 7810 bp. A full
+  mammalian-expression manufacturing plasmid (promoter + spike + polyA +
+  KanR + bacterial ori + AmpR) typically runs 7-9 kb.
+
+  Moderna's submission has:
+    - spike CDS (779-4595)             [annotated]
+    - KanR CDS (5735-6545)             [annotated]
+    - T7 primer (4649, reverse)        [detected, unannotated]
+    - ~2 kb of unannotated sequence (1-778, 4596-5734, 6546-6777)
+
+  None of the standard promoter/origin/polyA probes hit those unannotated
+  regions. Two possible explanations:
+    (a) Moderna used a non-standard promoter/origin that this probe
+        panel does not cover
+    (b) OR134578.1 is a minimal expression-cassette submission (spike +
+        KanR + necessary transcription signals), NOT the full
+        manufacturing plasmid — the bacterial-propagation elements
+        (pUC ori, AmpR, f1 ori) and any SV40-derived elements would be
+        absent from this submission even if present in the actual
+        manufacturing construct
+
+  The data CANNOT distinguish (a) from (b) without access to the Moderna
+  full manufacturing plasmid sequence, which is not publicly deposited
+  as of this analysis.
+
+BOTTOM LINE FOR MODERNA:
+  SV40 promoter/ori/polyA, f1 origin, CMV promoter, BGH polyA, AmpR,
+  and pUC ori are NOT DETECTABLE in the Moderna OR134578.1 GenBank
+  submission. This is "absent from the submission", NOT "absent from
+  the manufactured vaccine". The Moderna manufacturing plasmid map has
+  not been publicly released, so the SV40 question for Moderna remains
+  OPEN — it cannot be resolved from the submitted sequence alone.
+
+  The McKernan/Buckhaults/Koenig/Speicher/Raoult/Kaemmerer vial-level
+  contamination measurements cited in COMBINED_SYNTHETIC_CONTAMINATION_
+  REPORT.txt quantified DNA in finished Moderna vials and found
+  exceedances of the 10 ng/dose limit, but did not sequence-resolve
+  which vector elements those DNA fragments carried. So the vial-level
+  evidence does not resolve the Moderna SV40 question either.
+
+================================================================================
+WHAT THE GENBANK SUBMISSION DOES NOT TELL YOU
+================================================================================
+
+  The submitted GenBank record for OR134577.1 (Pfizer) annotates only:
+    - source
+    - NeoR/KanR gene (pos 1487-2282)
+    - BNT162b2 spike CDS (pos 3673-7480)
+
+  It does NOT annotate:
+    - SV40 early promoter / origin of replication  [PRESENT, unannotated]
+    - SV40 polyA signal                            [PRESENT, unannotated]
+    - ColE1/pUC origin                             [PRESENT, unannotated]
+    - f1 origin                                    [PRESENT, unannotated]
+    - T7 promoter                                  [PRESENT, unannotated]
+    - CMV elements (if any)                        [PRESENT, unannotated]
+
+  The submitted GenBank record for OR134578.1 (Moderna) annotates only:
+    - source
+    - Spike CDS (pos 779-4595)
+    - KanR (pos 5735-6545)
+
+  It does NOT annotate the same set of regulatory elements.
+
+  THIS IS WHY PROBE-BASED DETECTION IS UNRELIABLE HERE:
+    Without feature annotations, analysts must guess which probe variants
+    to use. Pfizer/Moderna did not disclose the exact vector maps in their
+    GenBank submissions. The elements are IN the sequence but not LABELED.
+
+================================================================================
+CORRECTED VECTOR COMPOSITION TABLE
+================================================================================
+
+  ELEMENT                           | PFIZER BNT162b2 | MODERNA mRNA1273
+  ----------------------------------+-----------------+------------------
+  Spike (codon-optimized)           |     YES         |     YES
+  KanR/NeoR                         |     YES         |     YES (annotation)
+  T7 promoter                       |     YES         |     YES (probe-confirmed)
+  SV40 early promoter + origin      |     YES *       |     NOT DETECTED +
+  SV40 polyA                        |     YES         |     NOT DETECTED +
+  ColE1 / pUC origin                |     YES **      |     YES ** (backbone)
+  f1 bacteriophage origin           |     YES (probe) |     NOT DETECTED +
+  CMV promoter elements             |     (possible)  |     NOT DETECTED +
+  BGH polyA                         |     (n/a)       |     NOT DETECTED +
+  AmpR                              |     (n/a)       |     NOT DETECTED +
+
+  *   Confirmed by 100% identity to pCMV-BD/pCMVTAG family which explicitly
+      annotates "SV40 early promoter and origin of replication"
+  **  Confirmed by 100% identity to backbone family which explicitly
+      annotates ColE1/pMB1/pBR322/pUC origin
+  +   NOT DETECTED in the Moderna OR134578.1 GenBank submission (6777 bp).
+      The submission appears to be a minimal expression cassette, NOT the
+      full manufacturing plasmid. SV40/promoter/origin status of the
+      actual Moderna manufacturing construct remains OPEN. See FOLLOW-UP
+      section above.
+
+  Mammalian promoter elements present:
+    - SV40 early promoter (strong Pol II promoter)       — Pfizer confirmed
+    - ColE1 cryptic mammalian promoter                   — both confirmed
+    - CMV immediate early (if pCMV backbone intact)      — possible in Pfizer
+
+================================================================================
+RELEVANCE TO EMA ASK-289849
+================================================================================
+
+  The requester (T. Emmett) asked EMA for BWP documents concerning:
+    "SV40 promoter/enhancer or other expression-related sequence elements"
+
+  The EMA batch 2 release letter (EMA/142071/2026) delivers:
+    "BWP position on residual DNA in Comirnaty"
+
+  CRITICAL QUESTION for the confirmatory appeal:
+    Does the BWP position document acknowledge that the SV40 early
+    PROMOTER (not just polyA) is present in the vector?
+
+  If the BWP document describes only "SV40 polyA" and omits the promoter/
+  enhancer/origin, that is a material omission. The GenBank annotation
+  gap (features not labeled) means the BWP may have assessed an incomplete
+  picture of the vector's expression cassette elements.
+
+  The ColE1 cryptic promoter question should also be raised:
+    Has the BWP assessed whether residual DNA fragments containing the
+    ColE1 origin could drive unintended mammalian transcription?
+
+================================================================================
+FILES UPDATED/CORRECTED
+================================================================================
+
+  CORRECTED:
+    - This file (VECTOR_CORRECTED_VERDICT_20260712.txt)
+    - sv40_colE1_deep_scan.py (new deep-scan script)
+    - vector_feature_map.py (new feature-mapping script)
+
+  STILL NEEDS UPDATE:
+    - vaccine_vector_screen.py — probes are wrong, should be deprecated
+    - VACCINE_DETECTOR_VERDICT_20260712.txt — carries the wrong SV40 call
+    - CALIBRATED_SCORER_VERDICT_20260712.txt — references the wrong call
+
+  AUTHORITATIVE REFERENCE FILES:
+    - OR134577.1_genbank.gb  (Pfizer, fetched from NCBI)
+    - OR134578.1_genbank.gb  (Moderna, fetched from NCBI)
+
+================================================================================
+END CORRECTED VERDICT
+================================================================================

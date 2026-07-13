@@ -30,20 +30,21 @@ empirical p via rank.
   -----------------------  ------  -----  --------  ----------------------------
   Pfizer_vector_OR134577   100.893   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
   Moderna_vector_OR134578   69.524   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
-  Pfizer_2P_vaccine         56.262   4    0.0435    HIGH_CONFIDENCE_SYNTHETIC
-  HexaPro_6P                10.470   1    0.1304    NATURAL
   Wuhan_Hu1_full             1.394   0    0.6957    NATURAL
 
-Key observation: Pfizer and Moderna VECTORS score 12-72 sigma above the
+Key observation: Pfizer and Moderna VECTORS score 50-70 sigma above the
 nearest natural outlier. The natural-cluster control (Wuhan Hu-1) sits at
 Z=1.4. This is not a close call.
 
-Limitation note: HexaPro scores NATURAL here despite being a known
-designed construct (2P + 4P furin-stabilized). This is expected —
-stabilization is achieved via point mutations that do not appreciably
-shift codon usage, GC, or CpG. The scorer detects REWRITING (codon
-optimization, GC manipulation, restriction-site seeding), not point
-engineering. Known limitation, not a bug.
+Baseline distribution of composite Z (22 natural viral genomes):
+  mean = 2.76, std = 3.26, max = 12.94, 95th pct = 12.20
+
+Note: Pfizer_2P_vaccine and HexaPro_6P reference FASTAs are no longer
+on disk, so they are excluded from the current run. Earlier runs (when
+those files were present) scored Pfizer_2P at Z=56 and HexaPro at Z=10
+(NATURAL — the scorer detects codon-rewriting, not point-mutation
+stabilization; HexaPro is point-engineered, not rewritten, so NATURAL
+is the expected call).
 
 =========================================================
 STREAM 2: VIAL-LEVEL DNA CONTAMINATION (MULTI-LAB)
@@ -77,23 +78,40 @@ indicate synthetic vector material beyond the spike coding sequence:
   Moderna:  Z =  69.5 (sequence)  +  up to 516x contamination (vial)
 
 Stream 1 (sequence) answers WHAT is present:
-  the pCMV-BD backbone (AF151088.1 family) carrying SV40 promoter+ori,
-  f1 origin, KanR selection marker — a full plasmid vector, not just
-  spike mRNA. See VECTOR_CORRECTED_VERDICT_20260712.txt for the
-  chain-of-evidence on the SV40 promoter call (previously a false-
-  negative, now corrected via pCMV-BD probes, not canonical SV40).
+
+  PFIZER — full plasmid vector backbone confirmed:
+    pCMV-BD backbone (AF151088.1 family) carrying SV40 promoter+ori,
+    f1 origin, KanR selection marker, ColE1/pUC origin. See
+    VECTOR_CORRECTED_VERDICT_20260712.txt for the chain-of-evidence
+    on the SV40 promoter call (previously a false-negative, now
+    corrected via pCMV-BD probes, not canonical SV40).
+
+  MODERNA — expression cassette only; SV40 status OPEN:
+    Broad 15-probe screen of OR134578.1 (6777 bp) found ONLY the T7
+    primer. SV40 promoter/ori/polyA, f1 origin, CMV, BGH polyA, AmpR,
+    and pUC ori were NOT DETECTED. However, the Moderna submission is
+    1 kb shorter than a full manufacturing plasmid and appears to be
+    a minimal expression-cassette deposit (spike + KanR + T7 only),
+    NOT the full manufacturing construct. SV40 presence in the actual
+    Moderna manufacturing plasmid CANNOT be resolved from the public
+    GenBank sequence alone. See VECTOR_CORRECTED_VERDICT_20260712.txt
+    FOLLOW-UP section for the full probe-by-probe breakdown.
 
 Stream 2 (vial) answers HOW MUCH is present in finished product:
   up to ~500x the regulatory DNA limit per dose, documented across
   six independent labs in four countries using orthogonal methods
   (Illumina, qPCR+fluorometry, full-plasmid recovery, replication
-  assay).
+  assay). Most labs measured bivalent (Pfizer+Moderna combined) vials,
+  so the contamination measurements do not cleanly distinguish brands.
 
 Concordance of these two independent methods — sequence forensics on
 the reference vector AND qPCR/sequencing on manufactured vials — is
-the strongest available evidence that residual plasmid vector,
-including the SV40 promoter/ori, is present in finished mRNA vaccine
-product at levels far exceeding pre-LNP regulatory limits.
+the strongest available evidence that residual plasmid vector DNA is
+present in finished mRNA vaccine product at levels far exceeding
+pre-LNP regulatory limits. For Pfizer, the SV40 promoter/ori is
+sequence-confirmed in the vector. For Moderna, the SV40 question
+remains open pending public release of the full manufacturing plasmid
+sequence.
 
 =========================================================
 CHAIN OF EVIDENCE
@@ -124,6 +142,16 @@ To regenerate Stream 1:
   python calibrated_composite_scorer.py
   -> writes calibrated_composite_scores.csv
      +  calibrated_baseline_features.csv
+
+The scorer ALSO computes the combined view (Stream 1 x Stream 2 join):
+  -> writes combined_contamination_by_lab.csv  (per-lab, with brands)
+     +  combined_per_brand_summary.csv          (per-brand Z + max ng/dose)
+
+The combined view is now PIPELINE-GENERATED, not hand-edited. The
+scorer loads validation_data/known_contamination_levels.csv, computes
+fold-exceedance over the 10 ng/dose regulatory limit, attributes labs
+to brands via notes-column heuristics (conservative: unspecified labs
+contribute to both brands), and joins with the Z-score output.
 
 To regenerate vector-component detection (Stream 1 supplement):
   python vaccine_vector_screen.py
