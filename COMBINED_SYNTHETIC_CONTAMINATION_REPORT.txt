@@ -1,6 +1,7 @@
 COMBINED SYNTHETIC-CONTAMINATION FORENSIC REPORT
 =================================================
-Generated: 2026-07-13 (updated with verified 2P spike, tautology check, RSCU)
+Generated: 2026-07-13 (updated with verified 2P spike, tautology check,
+                      RSCU, protein-level null model)
 
 PURPOSE
 -------
@@ -176,6 +177,67 @@ pre-LNP regulatory limits. For Pfizer, the SV40 promoter/ori is
 sequence-confirmed in the vector. For Moderna, the SV40 question
 remains open pending public release of the full manufacturing plasmid
 sequence.
+
+=========================================================
+PROTEIN-LEVEL NULL MODEL (WUHAN-CONTROLLED HONESTY CHECK)
+=========================================================
+The DNA-level evidence (codon optimization, SV40 promoter, Type IIS
+sites, vial contamination) is strong. To avoid overclaiming, the
+protein-level features that are sometimes attributed to the vaccine
+spike were tested with Wuhan-Hu-1 as a matched control.
+
+Test: Pfizer 2P spike (validation_data/2P_Vaccine.fasta) vs Wuhan-Hu-1
+spike (data/all_sequences/sars_cov_2_wuhan_spike.fasta). Proteins are
+99.8% identical (only K986P, V987P differ — the 2P mutations).
+
+(1) PRION-LIKE DOMAIN SCAN (PLAAC HMM + Viterbi, alpha=1.0, c=60):
+  Uses the same algorithm as Tetz & Tetz (2022). Run via plaac.jar.
+
+  sequence       max_LLR   COREscore   has_PrD   PrD locus
+  -------------  -------   ---------   -------   ---------
+  Pfizer_2P      -2.697    NaN         False     899-958
+  Wuhan_Hu1      -2.697    NaN         False     899-958
+
+  Result: IDENTICAL. Neither sequence has a significant prion-like
+  domain (LLR negative, COREscore undefined). The 2P mutations
+  (positions 986/987) fall OUTSIDE the PLAAC PrD locus (899-958),
+  so they cannot alter prion-domain signal. Claiming the vaccine
+  spike has "enhanced prion domains" is NOT supported.
+
+(2) TETZ PrD LOCAL Q/N SCAN (positions 473-510):
+  Tetz PrD sequence (byte-identical in both):
+    YQAGSTPCNGVEGFNCYFPLQSYGFQPTNGVGYQPYRV
+  Q+N content: 18.42% in BOTH. The 2P mutations are at 986/987,
+  far outside the Tetz PrD (473-510), so the PrD is unchanged.
+
+(3) NLS SCAN (6-frame translation, scan_protein_nls.py):
+  Motifs searched: SV40 large T NLS (PKKKRKV), bipartite NLS,
+  KKKR, RKKR, KKRR, RRRR, KKKK, KRRR, RRKR.
+
+  sequence       correct frame (+1)   all 6 frames combined
+  -------------  ------------------   ---------------------
+  Pfizer_2P      0 motifs             0
+  Wuhan_Hu1      0 motifs             0
+
+  Result: ZERO NLS motifs in the spike protein of EITHER sequence,
+  in ANY reading frame. The "26 NLS motifs in Pfizer spike" claim
+  that circulates in some summaries is NOT supported by this scan.
+  NLS motifs ARE present in the vector backbone (SV40 large T
+  antigen carries PKKKRKV), but those belong to the VECTOR, not to
+  the spike. Attributing vector-backbone NLS hits to the spike is a
+  category error.
+
+CONCLUSION OF NULL MODEL:
+  The protein-level claims that are sometimes attached to the
+  vaccine-spike sequence (enhanced prion domains, spike NLS motifs)
+  do NOT survive a Wuhan-controlled comparison. The defensible
+  evidence is at the DNA/vector level (Streams 1 + 2 above), not at
+  the spike-protein level. This null model is recorded here so the
+  evidence package is honest and falsifiable.
+
+Reproduce with:
+  python protein_level_comparison.py
+  (uses spike_prion_analyzer.py + scan_protein_nls.py + plaac.jar)
 
 =========================================================
 CHAIN OF EVIDENCE
