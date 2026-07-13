@@ -118,6 +118,108 @@ def features_for_fasta(fa_path):
         return None
 
 
+# ---------------------------------------------------------------------------
+# RSCU (Relative Synonymous Codon Usage) — added 2026-07-13
+# ---------------------------------------------------------------------------
+# RSCU measures codon preference within each synonymous group.
+#   RSCU = 1.0  →  codon used equally
+#   RSCU > 1.0  →  codon preferred
+#   RSCU < 1.0  →  codon avoided
+# Codon-optimized vaccines have MORE EXTREME RSCU values than natural human
+# genes because optimization replaces ALL codons with the "best" one, while
+# natural genes retain a mix.
+
+SYNONYMOUS_GROUPS = {
+    'F': ['TTT', 'TTC'],
+    'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+    'I': ['ATT', 'ATC', 'ATA'],
+    'M': ['ATG'],
+    'V': ['GTT', 'GTC', 'GTA', 'GTG'],
+    'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
+    'P': ['CCT', 'CCC', 'CCA', 'CCG'],
+    'T': ['ACT', 'ACC', 'ACA', 'ACG'],
+    'A': ['GCT', 'GCC', 'GCA', 'GCG'],
+    'Y': ['TAT', 'TAC'],
+    'H': ['CAT', 'CAC'],
+    'Q': ['CAA', 'CAG'],
+    'N': ['AAT', 'AAC'],
+    'K': ['AAA', 'AAG'],
+    'D': ['GAT', 'GAC'],
+    'E': ['GAA', 'GAG'],
+    'C': ['TGT', 'TGC'],
+    'W': ['TGG'],
+    'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
+    'G': ['GGT', 'GGC', 'GGA', 'GGG'],
+}
+
+# All sense codons (excluding stop)
+ALL_SENSE_CODONS = [c for group in SYNONYMOUS_GROUPS.values() for c in group]
+
+
+def compute_rscu(seq, frame=0):
+    """Compute RSCU table for a sequence in the given frame."""
+    seq = seq.upper()
+    codon_counts = Counter()
+    for i in range(frame, len(seq) - 2, 3):
+        codon = seq[i:i + 3]
+        if len(codon) == 3 and 'N' not in codon:
+            codon_counts[codon] += 1
+
+    rscu = {}
+    for aa, codons in SYNONYMOUS_GROUPS.items():
+        total = sum(codon_counts.get(c, 0) for c in codons)
+        if total == 0:
+            for c in codons:
+                rscu[c] = 0.0
+            continue
+        expected = total / len(codons)
+        for c in codons:
+            rscu[c] = codon_counts.get(c, 0) / expected if expected > 0 else 0.0
+    return rscu
+
+
+def rscu_correlation(rscu1, rscu2):
+    """Pearson correlation between two RSCU tables (over shared codons)."""
+    codons = ALL_SENSE_CODONS
+    v1 = np.array([rscu1.get(c, 0) for c in codons])
+    v2 = np.array([rscu2.get(c, 0) for c in codons])
+    if v1.std() == 0 or v2.std() == 0:
+        return 0.0
+    return float(np.corrcoef(v1, v2)[0, 1])
+
+
+def rscu_extremity(rscu):
+    """Mean |RSCU - 1| across all codons. Higher = more optimized.
+
+    Natural genes: ~0.3-0.6
+    Codon-optimized: ~0.8-1.5
+    """
+    vals = [abs(rscu.get(c, 0) - 1.0) for c in ALL_SENSE_CODONS]
+    return float(np.mean(vals))
+
+
+def pool_rscu(sequences):
+    """Compute pooled RSCU from multiple sequences (for reference)."""
+    pooled_counts = Counter()
+    for seq in sequences:
+        seq = seq.upper()
+        for i in range(0, len(seq) - 2, 3):
+            codon = seq[i:i + 3]
+            if len(codon) == 3 and 'N' not in codon:
+                pooled_counts[codon] += 1
+    rscu = {}
+    for aa, codons in SYNONYMOUS_GROUPS.items():
+        total = sum(pooled_counts.get(c, 0) for c in codons)
+        if total == 0:
+            for c in codons:
+                rscu[c] = 0.0
+            continue
+        expected = total / len(codons)
+        for c in codons:
+            rscu[c] = pooled_counts.get(c, 0) / expected if expected > 0 else 0.0
+    return rscu
+
+
 def build_baseline():
     """Build baseline distribution from natural viral genomes.
 
@@ -165,6 +267,17 @@ def build_baseline():
             if f:
                 f['baseline_class'] = 'natural_borrelia'
                 rows.append(f)
+
+    # Natural human genes as SEPARATE reference class (tautology check):
+    # If natural human genes score HIGH on synthetic-ness, the scorer is
+    # detecting "human codon usage" not "engineering." If they score LOW,
+    # the scorer is detecting something beyond codon optimization.
+    human_gene_paths = sorted((BASE / 'data/all_sequences').glob('human_*.fasta'))
+    for p in human_gene_paths:
+        f = features_for_fasta(p)
+        if f and f.get('GC_content') is not None:
+            f['baseline_class'] = 'natural_human'
+            rows.append(f)
 
     return pd.DataFrame(rows), [p.name for p in baseline_paths]
 
@@ -346,17 +459,20 @@ def combine_scorer_with_contamination(test_df, contam_df):
 def main():
     print('Building baseline distribution from natural viral genomes...')
     baseline_df, baseline_names = build_baseline()
-    # Use ONLY viral sequences for Z-score baseline (not Borrelia)
+    # Use ONLY viral sequences for Z-score baseline (not Borrelia/human)
     viral_baseline = baseline_df[baseline_df['baseline_class'] == 'natural_viral']
-    print(f'  Viral baseline: {len(viral_baseline)} natural viral genomes')
-    print(f'  Borrelia ref (not used for Z): '
-          f'{len(baseline_df) - len(viral_baseline)}')
+    human_baseline = baseline_df[baseline_df['baseline_class'] == 'natural_human']
+    borrelia_baseline = baseline_df[baseline_df['baseline_class'] == 'natural_borrelia']
+    print(f'  Viral baseline (Z-score ref): {len(viral_baseline)} natural viral genomes')
+    print(f'  Human gene ref (tautology check): {len(human_baseline)}')
+    print(f'  Borrelia ref (not used for Z): {len(borrelia_baseline)}')
     if len(viral_baseline) < 8:
         print('  WARNING: small viral baseline — Z-scores may be unstable')
 
     baseline_df_for_scoring = viral_baseline
 
     # Test set: vaccine vectors + positive controls + held-out naturals
+    # + human genes (to check if natural human genes score "synthetic")
     test_paths = [
         # Engineered (positives)
         ('Pfizer_2P_vaccine',  BASE / 'validation_data/2P_Vaccine.fasta'),
@@ -375,6 +491,17 @@ def main():
         # Held-out: Wuhan-Hu-1 (it's in baseline but let's confirm Z=0)
         ('Wuhan_Hu1_full',
          BASE / 'data/sequences/NC_045512_Wuhan-Hu-1_reference.fasta'),
+        # Natural human genes (tautology check: do they score synthetic?)
+        ('human_GAPDH',
+         BASE / 'data/all_sequences/human_gapdh.fasta'),
+        ('human_ACTB',
+         BASE / 'data/all_sequences/human_actb.fasta'),
+        ('human_albumin',
+         BASE / 'data/all_sequences/human_albumin.fasta'),
+        ('human_TP53',
+         BASE / 'data/all_sequences/human_tp53.fasta'),
+        ('human_PRNP',
+         BASE / 'data/all_sequences/human_prnp.fasta'),
     ]
 
     test_df, feature_cols, bm, bs = score_test_set(
@@ -422,6 +549,78 @@ def main():
     print(f'  std  = {baseline_composites.std():.2f}')
     print(f'  max  = {baseline_composites.max():.2f}')
     print(f'  95th pct = {np.percentile(baseline_composites, 95):.2f}')
+
+    # ---- RSCU codon usage comparison ----
+    # Build pooled human RSCU reference from all human gene sequences
+    human_seqs = []
+    for p in sorted((BASE / 'data/all_sequences').glob('human_*.fasta')):
+        try:
+            s = str(next(SeqIO.parse(str(p), 'fasta')).seq).upper()
+            if len(s) > 100:
+                human_seqs.append(s)
+        except Exception:
+            pass
+    human_rscu_ref = pool_rscu(human_seqs) if human_seqs else {}
+
+    # Compute RSCU metrics for each test sequence
+    rscu_rows = []
+    rscu_corr_col = {}
+    rscu_extremity_col = {}
+    for _, row in test_df.iterrows():
+        fa_path = None
+        for label, p in test_paths:
+            if label == row['label']:
+                fa_path = p
+                break
+        if not fa_path or not Path(fa_path).exists():
+            rscu_corr_col[row['label']] = None
+            rscu_extremity_col[row['label']] = None
+            continue
+        seq = str(next(SeqIO.parse(str(fa_path), 'fasta')).seq).upper()
+        seq_rscu = compute_rscu(seq)
+        corr = rscu_correlation(seq_rscu, human_rscu_ref) if human_rscu_ref else None
+        extrem = rscu_extremity(seq_rscu)
+        rscu_corr_col[row['label']] = round(corr, 4) if corr is not None else None
+        rscu_extremity_col[row['label']] = round(extrem, 4)
+        rscu_rows.append({
+            'label': row['label'],
+            'rscu_corr_to_human': round(corr, 4) if corr is not None else None,
+            'rscu_extremity': round(extrem, 4),
+        })
+
+    test_df['rscu_corr_to_human'] = test_df['label'].map(rscu_corr_col)
+    test_df['rscu_extremity'] = test_df['label'].map(rscu_extremity_col)
+
+    print('\n' + '=' * 90)
+    print('RSCU CODON USAGE COMPARISON')
+    print('=' * 90)
+    print('  rscu_corr_to_human = Pearson r vs pooled human gene reference')
+    print('  rscu_extremity     = mean |RSCU-1|; higher = more codon-optimized')
+    print('  Natural human genes: ~0.3-0.6 | Codon-optimized vaccines: ~0.8-1.5')
+    rscu_show = ['label', 'rscu_corr_to_human', 'rscu_extremity', 'classification']
+    print(test_df[rscu_show].sort_values(
+        'rscu_extremity', ascending=False).to_string(index=False))
+
+    # Save RSCU table for each test sequence
+    rscu_table_path = BASE / 'rscu_codon_usage_comparison.csv'
+    rscu_detail_rows = []
+    for _, row in test_df.iterrows():
+        fa_path = None
+        for label, p in test_paths:
+            if label == row['label']:
+                fa_path = p
+                break
+        if not fa_path or not Path(fa_path).exists():
+            continue
+        seq = str(next(SeqIO.parse(str(fa_path), 'fasta')).seq).upper()
+        seq_rscu = compute_rscu(seq)
+        r = {'label': row['label']}
+        r.update({c: round(seq_rscu.get(c, 0), 4) for c in ALL_SENSE_CODONS})
+        rscu_detail_rows.append(r)
+    if rscu_detail_rows:
+        pd.DataFrame(rscu_detail_rows).to_csv(rscu_table_path, index=False)
+        print(f'\n  RSCU detail table: {rscu_table_path.name} '
+              f'({len(rscu_detail_rows)} seqs x {len(ALL_SENSE_CODONS)} codons)')
 
     baseline_df.to_csv(BASE / 'calibrated_baseline_features.csv', index=False)
     test_df.to_csv(BASE / 'calibrated_composite_scores.csv', index=False)

@@ -1,24 +1,3 @@
-# promoter_db.fasta — reference promoter/origin sequences for vector screening
-#
-# Sources:
-#   - Canonical SV40 entries: NC_001669.1 (reference strain 776)
-#   - pCMV-BD backbone variants: extracted from OR134577.1_genbank.gb
-#     (Pfizer BNT162b2 vector), which comprehensive_vector_analysis.json
-#     confirmed shares 100% identity with pCMV-BD AF151088.1 at these
-#     positions. See VECTOR_CORRECTED_VERDICT_20260712.txt for the
-#     chain of evidence.
-#
-# Why both canonical and pCMV-BD variants are present:
-#   The Pfizer/Moderna vaccines use pCMV-family backbones, not canonical
-#   SV40. Single-base mismatches between the two caused false negatives
-#   in vaccine_vector_screen.py at 90% identity thresholds. Including
-#   both variants lets probes match either backbone.
-#
-# CHANGELOG:
-#   2026-07-13: Removed broken SV40_origin placeholder (was GATCGATCGATCGATCGATC).
-#               Added pCMV-BD_SV40_early_polyA, pCMV-BD_f1_origin,
-#               pCMV-BD_SV40_early_promoter_ori.
-
 >SV40_early  source=NC_001669.1  note=canonical_sv40_reference
 GAGGCAGAGGCGGGGGCGGAGCCGGGGGCGGGGGCTGAGGGGGCGGGAGGAGGGCGGGAGGGGGCTGAGGGCGGAGGGCGGAGGGGGCGGG
 

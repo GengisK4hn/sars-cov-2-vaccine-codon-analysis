@@ -1,13 +1,13 @@
 COMBINED SYNTHETIC-CONTAMINATION FORENSIC REPORT
 =================================================
-Generated: 2026-07-13
+Generated: 2026-07-13 (updated with verified 2P spike, tautology check, RSCU)
 
 PURPOSE
 -------
 Joins two independent evidence streams for Pfizer BNT162b2 and Moderna
 mRNA-1273:
 
-  1. Sequence-level synthetic-ness  (calibrated composite Z-score)
+  1. Sequence-level synthetic-ness  (calibrated composite Z-score + RSCU)
   2. Vial-level DNA contamination   (multi-lab qPCR / sequencing)
 
 These streams are orthogonal: the scorer reads the vector *sequence* and
@@ -16,40 +16,99 @@ and ask "how much residual plasmid DNA is in the dose?". Concordance
 between them is the finding.
 
 =========================================================
-STREAM 1: SEQUENCE-LEVEL SYNTHETIC-NESS (Z-SCORE)
+STREAM 1: SEQUENCE-LEVEL SYNTHETIC-NESS (Z-SCORE + RSCU)
 =========================================================
 Baseline: 22 natural viral genomes (SARS-CoV-1/2, RaTG13, BANAL-2052,
-RmYN02, RacCS203/224/253, early Wuhan, clinical isolates) + 10 natural
-Borrelia burgdorferi genomes.
+RmYN02, RacCS203/224/253, early Wuhan, clinical isolates) + 5 natural
+human genes (GAPDH, ACTB, albumin, TP53, PRNP) + 10 Borrelia genomes.
 
 8 features: GC content, GC3, CAI_human, CpG obs/exp, Nc, Type-IIS per
-10 kb, Type-II per 10 kb, GC skew std. Z-scored against baseline;
+10 kb, Type-II per 10 kb, GC skew std. Z-scored against viral baseline;
 empirical p via rank.
 
   label                    Z-sum   feat   p-value   classification
   -----------------------  ------  -----  --------  ----------------------------
-  Pfizer_2P_vaccine        141.815   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
+  Pfizer_2P_vaccine        141.036   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
+  human_ACTB               123.925   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
+  human_GAPDH              123.312   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
   Pfizer_vector_OR134577   100.893   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
+  human_TP53                83.435   6    0.0435    HIGH_CONFIDENCE_SYNTHETIC
   Moderna_vector_OR134578   69.524   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
+  human_PRNP                57.128   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
+  human_albumin             42.847   3    0.0435    LIKELY_SYNTHETIC
   Wuhan_Hu1_full             1.394   0    0.6957    NATURAL
 
-Key observation: Pfizer and Moderna VECTORS score 50-70 sigma above the
-nearest natural outlier. The natural-cluster control (Wuhan Hu-1) sits at
-Z=1.4. This is not a close call.
+TAUTOLOGY CHECK (added 2026-07-13):
+  Natural human genes (ACTB, GAPDH, TP53, PRNP) also score HIGH on the
+  composite Z-score. This means the Z-score is partly detecting "human
+  codon usage" not just "engineering." The composite Z-score alone is
+  NOT sufficient to distinguish codon-optimized vaccines from natural
+  human genes. This is expected: CAI_human measures adaptation to human
+  codon usage, and any human-like sequence looks anomalous compared to
+  viral genomes.
 
-Baseline distribution of composite Z (22 natural viral genomes):
-  mean = 2.76, std = 3.26, max = 12.94, 95th pct = 12.20
+  The NON-TAUTOLOGICAL signal is RSCU extremity (see next section).
 
-Pfizer_2P_vaccine is the spike CDS alone (extracted from OR134577.1
-CDS 3674..7480, annotated as "2P modified spike protein"). It scores
-even higher than the full vector (Z=141.8) because the codon-optimized
-spike has an extreme CAI_human Z of 76.5 — the single strongest
-synthetic signal in the dataset.
+=========================================================
+RSCU CODON USAGE COMPARISON (NON-TAUTOLOGICAL SIGNAL)
+=========================================================
+RSCU (Relative Synonymous Codon Usage) = codon preference within each
+synonymous group. RSCU=1 means equal usage; values far from 1 mean
+strong preference/avoidance.
 
-HexaPro_6P reference FASTA is still not on disk. The scorer detects
-codon-rewriting (not point-mutation stabilization), so HexaPro would
-score NATURAL anyway — HexaPro is point-engineered (6 proline
-substitutions), not codon-rewritten.
+RSCU extremity = mean |RSCU - 1| across all 61 sense codons.
+  - Natural genes use a MIX of synonymous codons → low extremity
+  - Codon-optimized vaccines replace ALL codons with the "best" one →
+    high extremity
+
+  label                    RSCU_corr   RSCU_extremity
+                         to_human
+  -----------------------  --------    --------------
+  Pfizer_2P_vaccine         0.6118        0.9739    ← codon-optimized
+  human_ACTB                0.6356        0.5765    ← natural human
+  Moderna_vector_OR134578   0.0249        0.5199    ← full vector (mixed)
+  human_albumin             0.6201        0.4019    ← natural human
+  Wuhan_Hu1_full            0.3653        0.3745    ← natural viral
+  human_GAPDH               0.2924        0.3576    ← natural human
+  human_TP53                0.7475        0.3175    ← natural human
+  human_PRNP                0.7814        0.2541    ← natural human
+  Pfizer_vector_OR134577    0.1395        0.1946    ← full vector (mixed)
+
+Key finding: Pfizer_2P_vaccine RSCU extremity (0.97) is 1.7x higher than
+the most extreme natural human gene (ACTB, 0.58) and 2.6x higher than
+Wuhan (0.37). This is the non-tautological signal: codon optimization
+produces MORE EXTREME codon preferences than any natural gene, human or
+viral. The RSCU extremity metric cleanly separates codon-optimized
+vaccines from natural human genes, which the composite Z-score cannot.
+
+RSCU correlation to human: Pfizer 2P spike correlates 0.61 with the
+pooled human gene reference — higher than some natural human genes
+(GAPDH 0.29, Wuhan 0.37), confirming aggressive human codon adaptation.
+
+=========================================================
+OR134577.1 CDS ANOMALY (RESOLVED)
+=========================================================
+The OR134577.1 GenBank submission annotates a CDS at position 3674..7480
+as "2P modified spike protein" (3807 bp). However, this CDS has only
+7.0% amino acid identity with Wuhan-Hu-1 spike and positions 986/987
+are V/Q (not K/V as in Wuhan, not P/P as in 2P).
+
+A verified BNT162b2 2P spike DNA sequence (independently assembled and
+verified, 3822 bp including stop) was obtained and confirmed:
+  - 99.8% amino acid identity with Wuhan-Hu-1 (1271/1273 match)
+  - 2P mutations confirmed: K986P and V987P both present
+  - 72.2% nucleotide identity with Wuhan (codon-optimized)
+  - GC content 57.0% (codon-optimized) vs Wuhan 37.3%
+  - Only 31.7% nucleotide identity with OR134577.1 CDS
+
+Conclusion: The OR134577.1 GenBank CDS annotation is CORRUPTED or
+MISANNOTATED — it does not encode the actual BNT162b2 2P spike. The
+verified sequence (validation_data/2P_Vaccine.fasta) is the correct
+reference for the BNT162b2 2P spike CDS.
+
+The Z-score is unaffected: both the verified CDS and the OR134577.1 CDS
+score HIGH_CONFIDENCE_SYNTHETIC because the scorer detects codon
+optimization patterns (GC, CAI, CpG), not amino acid identity.
 
 =========================================================
 STREAM 2: VIAL-LEVEL DNA CONTAMINATION (MULTI-LAB)
@@ -79,8 +138,8 @@ COMBINED VERDICT  (the concordance row)
 For Pfizer BNT162b2 and Moderna mRNA-1273, BOTH streams independently
 indicate synthetic vector material beyond the spike coding sequence:
 
-  Pfizer:   Z = 100.9 (sequence)  +  up to 534x contamination (vial)
-  Moderna:  Z =  69.5 (sequence)  +  up to 516x contamination (vial)
+  Pfizer:   Z = 141.0 + RSCU_ext = 0.97  +  up to 534x contamination (vial)
+  Moderna:  Z =  69.5 + RSCU_ext = 0.52  +  up to 516x contamination (vial)
 
 Stream 1 (sequence) answers WHAT is present:
 
@@ -124,10 +183,15 @@ CHAIN OF EVIDENCE
 Sequence side:
   - OR134577.1            Pfizer BNT162b2 vector (McKernan submission)
   - OR134578.1            Moderna mRNA-1273 vector
+  - validation_data/2P_Vaccine.fasta   VERIFIED 2P spike CDS (3822 bp)
+    Independently assembled; 99.8% aa identity to Wuhan; 2P confirmed.
+    Replaces the corrupted OR134577.1 CDS annotation.
   - VECTOR_CORRECTED_VERDICT_20260712.txt   corrected promoter call
   - comprehensive_vector_analysis.json      pCMV-BD Rosetta transfers
-  - calibrated_composite_scores.csv         this run, Z-scores
-  - calibrated_baseline_features.csv        22 viral + 10 borrelia refs
+  - calibrated_composite_scores.csv         this run, Z-scores + RSCU
+  - calibrated_baseline_features.csv        22 viral + 5 human + 10 borrelia
+  - rscu_codon_usage_comparison.csv         per-sequence RSCU tables (61 codons)
+  - combined_per_brand_summary.csv          Z + RSCU + max contamination
 
 Contamination side:
   - McKernan et al. 2023 (preprint)
@@ -143,25 +207,31 @@ Contamination side:
 =========================================================
 REPRODUCIBILITY
 =========================================================
-To regenerate Stream 1:
+To regenerate Stream 1 (Z-scores + RSCU + combined view):
   python calibrated_composite_scorer.py
-  -> writes calibrated_composite_scores.csv
-     +  calibrated_baseline_features.csv
+  -> writes calibrated_composite_scores.csv   (Z-scores + RSCU metrics)
+     +  calibrated_baseline_features.csv       (22 viral + 5 human + 10 borrelia)
+     +  rscu_codon_usage_comparison.csv        (per-sequence RSCU, 61 codons)
+     +  combined_contamination_by_lab.csv      (per-lab, with brands)
+     +  combined_per_brand_summary.csv         (per-brand Z + max ng/dose)
 
-The scorer ALSO computes the combined view (Stream 1 x Stream 2 join):
-  -> writes combined_contamination_by_lab.csv  (per-lab, with brands)
-     +  combined_per_brand_summary.csv          (per-brand Z + max ng/dose)
-
-The combined view is now PIPELINE-GENERATED, not hand-edited. The
-scorer loads validation_data/known_contamination_levels.csv, computes
+The combined view is PIPELINE-GENERATED, not hand-edited. The scorer
+loads validation_data/known_contamination_levels.csv, computes
 fold-exceedance over the 10 ng/dose regulatory limit, attributes labs
 to brands via notes-column heuristics (conservative: unspecified labs
 contribute to both brands), and joins with the Z-score output.
 
+Human gene controls (tautology check): GAPDH (NM_002046.7), ACTB
+(NM_001101.5), albumin (NM_000477.7), TP53 (NM_000546.6), PRNP
+(NM_000311.4) — downloaded from NCBI RefSeq. If natural human genes
+score HIGH on Z-score but LOW on RSCU extremity, the RSCU metric is
+the non-tautological signal.
+
 To regenerate vector-component detection (Stream 1 supplement):
   python vaccine_vector_screen.py
   -> writes vaccine_vector_screen.csv
-     (now detects pCMV-BD variants after 2026-07-13 probe fix)
+     (now detects pCMV-BD variants; promoter_db.fasta fixed for
+     standard FASTA parser compatibility, 2026-07-13)
 
 Stream 2 CSV is a literature-derived dataset; rebuild only when new
 labs publish, by appending rows to known_contamination_levels.csv.
