@@ -28,6 +28,7 @@ empirical p via rank.
 
   label                    Z-sum   feat   p-value   classification
   -----------------------  ------  -----  --------  ----------------------------
+  Pfizer_2P_vaccine        141.815   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
   Pfizer_vector_OR134577   100.893   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
   Moderna_vector_OR134578   69.524   5    0.0435    HIGH_CONFIDENCE_SYNTHETIC
   Wuhan_Hu1_full             1.394   0    0.6957    NATURAL
@@ -39,12 +40,16 @@ Z=1.4. This is not a close call.
 Baseline distribution of composite Z (22 natural viral genomes):
   mean = 2.76, std = 3.26, max = 12.94, 95th pct = 12.20
 
-Note: Pfizer_2P_vaccine and HexaPro_6P reference FASTAs are no longer
-on disk, so they are excluded from the current run. Earlier runs (when
-those files were present) scored Pfizer_2P at Z=56 and HexaPro at Z=10
-(NATURAL — the scorer detects codon-rewriting, not point-mutation
-stabilization; HexaPro is point-engineered, not rewritten, so NATURAL
-is the expected call).
+Pfizer_2P_vaccine is the spike CDS alone (extracted from OR134577.1
+CDS 3674..7480, annotated as "2P modified spike protein"). It scores
+even higher than the full vector (Z=141.8) because the codon-optimized
+spike has an extreme CAI_human Z of 76.5 — the single strongest
+synthetic signal in the dataset.
+
+HexaPro_6P reference FASTA is still not on disk. The scorer detects
+codon-rewriting (not point-mutation stabilization), so HexaPro would
+score NATURAL anyway — HexaPro is point-engineered (6 proline
+substitutions), not codon-rewritten.
 
 =========================================================
 STREAM 2: VIAL-LEVEL DNA CONTAMINATION (MULTI-LAB)
